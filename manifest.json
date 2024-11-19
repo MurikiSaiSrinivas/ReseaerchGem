@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "ResearchGem (Enhanced Research Assistant)",
+  "version": "1.0",
+  "description": "Summarize, translate, and simplify highlighted research content.",
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}
