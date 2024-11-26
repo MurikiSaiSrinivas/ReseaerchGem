@@ -1,0 +1,18 @@
+.card-container {
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 4px 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.card-container a {
+    width: 100%;
+}
+
+.card-container .text{
+    height: 200px;
+    overflow-y: auto;
+}
+
+.card-container button{
+    margin: 0.5rem;
+}

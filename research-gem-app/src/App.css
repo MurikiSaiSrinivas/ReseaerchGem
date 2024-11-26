@@ -1,0 +1,38 @@
+#root {
+  width: 100%;
+  margin: 2rem;
+  text-align: center;
+  position: relative;
+
+}
+
+body {
+  background: url("/background.webp");
+  background-position: center;
+}
+
+.login {
+  height: 50vh;
+  aspect-ratio: 2;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 1rem;
+  padding: 4rem;
+
+  background: rgb(238, 174, 202);
+  background: radial-gradient(circle, rgba(238, 174, 202, 0.7) 0%, rgba(148, 187, 233, 0.7) 100%);
+  backdrop-filter: blur(4px);
+}
+
+.login button {
+  width: fit-content;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
