@@ -1,10 +1,38 @@
 // background.js
+console.log("Setup started")
+//firebase Setup
+// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+// import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+// import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD6OGbliDq-a8aCNRf3h8sU0MzE6Ut6uzw",
+  authDomain: "researchgem-73bfb.firebaseapp.com",
+  projectId: "researchgem-73bfb",
+  storageBucket: "researchgem-73bfb.firebasestorage.app",
+  messagingSenderId: "529146279176",
+  appId: "1:529146279176:web:85ce4df1c4b0a5c2e8e8bd",
+  measurementId: "G-4388MYD25M"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider()
+//firebase setup & intialization completes here
+
 let currentState = {
   action: null,
   text: null,
   isProcessing: false,
+  user: null,
   timestamp: Date.now(),
 };
+
+// Global user variable to track authentication state
+let currentUser = null;
 
 // Message Listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -15,11 +43,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (action === "save") {
+    // Trigger Google Sign-In and save process
+    signInAndSaveText(text)
+      .then((savedItem) => {
+        // Update state with saved item details
+        currentState = {
+          ...currentState,
+          action: null,
+          isProcessing: false,
+          result: "Text saved successfully!",
+        };
+
+        // Send success message to popup
+        chrome.runtime.sendMessage({
+          type: "API_RESPONSE",
+          data: "Text saved successfully!"
+        });
+      })
+      .catch((error) => {
+        // Handle errors
+        currentState = {
+          ...currentState,
+          action: null,
+          isProcessing: false,
+          error: error.message,
+        };
+
+        // Send error to popup
+        chrome.runtime.sendMessage({
+          type: "API_ERROR",
+          error: error.message
+        });
+      });
+
+    return true;
+  }
+
   if (
     action === "summarize" ||
     action === "translate" ||
-    action === "simplify" ||
-    action === "insight"
+    action === "simplify"
   ) {
     if (!sender.tab) {
       getCurrentTab().then((tab) => {
@@ -37,6 +101,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function getCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
+}
+
+// Firebase Authentication and Save Function
+async function signInAndSaveText(text) {
+  try {
+    // If no user is currently signed in, trigger sign-in
+    if (!currentUser) {
+      const result = await signInWithPopup(auth, provider);
+      currentUser = result.user;
+
+      // Update current state with user info
+      currentState.user = {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName
+      };
+    }
+
+    // Check if text is empty
+    if (!text) {
+      throw new Error("No text selected to save");
+    }
+
+    // Check if this exact text is already saved for this user
+    const existingQuery = query(
+      collection(db, "savedTexts"),
+      where("userId", "==", currentUser.uid),
+      where("text", "==", text)
+    );
+    const existingDocs = await getDocs(existingQuery);
+
+    if (!existingDocs.empty) {
+      throw new Error("This text has already been saved");
+    }
+
+    // Save text to Firestore
+    const savedItem = await addDoc(collection(db, "savedTexts"), {
+      text: text,
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      savedAt: new Date(),
+      metadata: {
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL
+      }
+    });
+
+    return savedItem;
+  } catch (error) {
+    console.error("Error in save process:", error);
+    throw error;
+  }
 }
 
 async function handleAction(action, text, tabId) {
@@ -95,7 +211,7 @@ async function handleAction(action, text, tabId) {
       case "simplify":
         responseText = await callSimplifyAPI(text);
         break;
-      case "insight":
+      case "save":
         responseText = await callInsightAPI(text);
         break;
     }
@@ -177,10 +293,10 @@ async function callSimplifyAPI(text) {
   return await callLLM(questionsPrompt);
 }
 
-async function callInsightAPI(text) {
-  const questionsPrompt = `Analyze the following text and provide key insights and observations: ${text}`;
-  return await callLLM(questionsPrompt);
-}
+// async function callInsightAPI(text) {
+//   const questionsPrompt = `Analyze the following text and provide key insights and observations: ${text}`;
+//   return await callLLM(questionsPrompt);
+// }
 
 // Context Menu Setup
 chrome.runtime.onInstalled.addListener(() => {
@@ -188,7 +304,7 @@ chrome.runtime.onInstalled.addListener(() => {
     { id: "summarize", title: "Summarize Text" },
     { id: "translate", title: "Translate Text" },
     { id: "simplify", title: "Simplify Text" },
-    { id: "insight", title: "Ask Insight" },
+    { id: "save", title: "Save Text" },
   ];
 
   menuItems.forEach((item) => {
@@ -201,8 +317,13 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  const validActions = ["summarize", "translate", "simplify", "insight"];
+  const validActions = ["summarize", "translate", "simplify", "save"];
   if (validActions.includes(info.menuItemId)) {
-    handleAction(info.menuItemId, info.selectionText, tab.id);
+    if (info.menuItemId = "save") {
+      signInAndSaveText(info.selectionText)
+    }
+    else {
+      handleAction(info.menuItemId, info.selectionText, tab.id);
+    }
   }
 });

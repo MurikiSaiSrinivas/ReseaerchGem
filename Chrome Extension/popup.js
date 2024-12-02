@@ -1,6 +1,6 @@
 // popup.js
 document.addEventListener("DOMContentLoaded", () => {
-  const buttons = ["summarize", "translate", "simplify", "insight"];
+  const buttons = ["summarize", "translate", "simplify", "save"];
   const statusDiv = document.getElementById("status");
   const resultDiv = document.getElementById("result");
 
@@ -53,8 +53,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return "Translating text";
       case "simplify":
         return "Simplifying text";
-      case "insight":
-        return "Analyzing for insights";
+      case "save":
+        return "Login and Save the Text";
       default:
         return "Processing";
     }
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (button) {
       button.addEventListener("click", async () => {
         showLoading(buttonId);
-
+        console.log("Button Clicked")
         // Send message to background script
         chrome.runtime.sendMessage({
           action: buttonId,
